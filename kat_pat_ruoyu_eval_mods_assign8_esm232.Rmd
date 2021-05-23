@@ -70,11 +70,56 @@ results = cbind.data.frame(simnames=simnames, minannual_cor = res_min$., maxannu
 
 summary(results)
 
-# graph range of performance measures
-resultsl = results %>% gather(key="metric",value="value", -simnames)
-ggplot(resultsl, aes(metric, value))+geom_boxplot()+facet_wrap(~metric, scales="free")
-
+# Make results long format
+resultsl = results %>% 
+  gather(key="metric",value="value", -simnames) 
 ```
+
+3.  Find the simulation that gives the best performance (record that and add to the quiz on gauchospace)
+```{r}
+# find the best model run (highest average correlation)
+bestdf <- resultsl %>% 
+  group_by(simnames) %>% 
+  summarize(
+    ave_cor = mean(value)
+  ) %>% 
+  arrange(-ave_cor)
+print(as.character(bestdf$simnames[1]))
+```
+
+
+4. Create a boxplot of your metric applied to sagerm.txt
+```{r}
+# graph range of performance measures
+
+
+resultsplot <- resultsl %>% 
+  mutate(
+    namedmetric = case_when(
+      metric == 'maxannual_cor' ~ 'Annual Max. Flows',
+      metric == 'minannual_cor' ~ 'Annual Min. Flows'
+    )
+  )
+ggplot(resultsplot, aes(namedmetric, value))+
+  geom_boxplot()+
+  facet_wrap(~namedmetric, scales="free")+
+  labs(x='Performance Metric Correlated Variable',
+       y='Pearson Correlation Coefficient',
+       title = 'Model Performance: Correlation between Simulated and Observed Values')+
+  theme_minimal()
+```
+
+
+5. Submit metric function and boxplot on gauchospace
+
+
+
+
+
+
+
+
+
 Just some basic stuff Kat did first before diving into using the txt file...
 ```{r}
 # apply metric on annual basis
@@ -120,11 +165,3 @@ ggplot(res_df, aes(x=minvmax, y=cor, color=type)) +
        caption = str_wrap('Here we see that the model best predicts maximum flow levels at the annual level using water years, but best predicts minimum flow levels at the annual level using date years. Annual predictions are better than monthly or daily predictions.', 100))
 
 ```
-
-3.  Find the simulation that gives the best performance (record that and add to the quiz on gauchospace)
-
-
-
-4. Create a boxplot of your metric applied to sagerm.txt
-
-5. Submit metric function and boxplot on gauchospace
