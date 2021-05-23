@@ -1,6 +1,6 @@
 ---
-title: "assign8_eval_mods"
-author: "Kat Leigh"
+title: "ESM232 Assignment 8: Evaluating Models"
+author: "Pat Byrne, Kat Leigh, Ruoyu Wang"
 date: "5/20/2021"
 output: html_document
 ---
