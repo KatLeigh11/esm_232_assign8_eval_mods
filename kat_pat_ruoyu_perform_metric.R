@@ -1,12 +1,12 @@
 #' flowmetrics
 #'
-#' A performance metric: estimated annual minimal and maximal flow must both have a Pearson’s Correlation Coefficient greater than 0.6.
+#' A performance metric: the Pearson’s Correlation Coefficient of estimated annual minimal and maximal flow versus actual observations
 #' @param  m  model estimates
 #' @param  o  observations
 #' @param  month month
 #' @param  day day
 #' @param  year year
-#' @return annual_min_cor
+#' @return annual_max_cor and annual_min_cor
 #' @author Pat Byrne, Kat Leigh, Ruoyu Wang
 
 
