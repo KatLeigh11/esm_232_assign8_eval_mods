@@ -1,6 +1,6 @@
 #' flowmetrics
 #'
-#' A performance metric: the Pearson’s Correlation Coefficient of estimated annual minimal and maximal flow versus actual observations
+#' Performance metrics: the Pearson’s Correlation Coefficients of estimated annual minimal and maximal flow versus the annual minimal and maximal of actual observations
 #' 
 #' @param  m  model estimates
 #' @param  o  observations
