@@ -1,11 +1,15 @@
 #' flowmetrics
 #'
 #' A performance metric: the Pearson’s Correlation Coefficient of estimated annual minimal and maximal flow versus actual observations
+#' 
 #' @param  m  model estimates
 #' @param  o  observations
 #' @param  month month
 #' @param  day day
 #' @param  year year
+#' @param  wy water year
+#' @param  grouping grouping variable, could be month, day, year or water year
+#' 
 #' @return annual_max_cor and annual_min_cor
 #' @author Pat Byrne, Kat Leigh, Ruoyu Wang
 
