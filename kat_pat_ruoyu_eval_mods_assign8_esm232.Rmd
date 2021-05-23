@@ -5,163 +5,107 @@ date: "5/20/2021"
 output: html_document
 ---
 
-
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE,
+                      message = FALSE,
+                      warning = FALSE)
 library(tidyverse)
 library(purrr)
 library(lubridate)
 ```
 
-Develop your own performance metric - Be creative here. Imagine an application of a hydrologic model as a component of an environmental assessment. It could be ecologically related (e.g estimating streamflow during the summer as part of assessing fish habitat quality); water resource management related (e.g estimating total water supply), or something else.
+### 1. Code metric as a function
 
-- metric: estimated minimal and maximal flow must both have a Pearson’s Correlation Coefficient greater than 0.6, but the closer to 1, the better.
+Our metric: estimated minimal and maximal flow must both have a Pearson’s Correlation Coefficient greater than 0.6, but the closer to 1, the better.
 
-1. Code your metric as a function
-
-- kat_pat_ruoyu_perform_metric
-
-2. Apply to the streamflow data provided in sagerm.txt (multiple model results)
-
-```{r}
+```{r func}
+# call out function "perform_metric"
 source('kat_pat_ruoyu_perform_metric.R')
+```
 
+### 2. Apply to the streamflow data provided in sagerm.txt (multiple model results)
+
+```{r data}
+# read observation data
 sager <- read.table("sager.txt", header=T)
-head(sager)
 
 # add date from the existing columns of day, month, year
-sager <- sager %>% mutate(date=make_date(year=year, month=month, day=day))
+sager <- sager %>% 
+  mutate(date=make_date(year=year, month=month, day=day))
 
+# read in simulation outputs
 msage = read.table("sagerm.txt", header=T)
 
-# lets say we know the start date from our earlier output
+# combine the simulation outputs with date and acutal observation data in sager.txt
 msage$date = sager$date
 msage$month = sager$month
 msage$year = sager$year
 msage$day = sager$day
 msage$wy = sager$wy
-msage$wyd = sager$wyd
-
-# and observed data
 msage$obs = sager$obs
+```
 
-# grouping
-# grouping <- c('msage$wy', 'msage$year', 'msage$month', 'msage$wyd', 'msage$day')
-
+```{r clean.data}
 # turn all the columns of different outputs into a single column identified by "run"
-msagel = msage %>% gather(key="run",value="streamflow", -date, -month, -day, -year, -wy, -obs)
-
-res = msage %>% select(-date, -month, -day, -year, -wy, -obs, -wyd) %>% map(~kat_pat_ruoyu_perform_metric(m=.x, o=msage$obs, month = msage$month, day = msage$day, year=msage$year, wy=msage$wy, wyd=msage$wyd, grouping=msage$wy))
-
-# note! I want to design this so that you can run it for all the different groupings at once (like the simple example at the bottom of this doc). But I can't figure out how to code it so that it works. Right now this works for wy, but we'd have to copy paste the same stuff again and just change the grouping variable for year, month, wyd, and day... and then stick all the results into a big dataframe and then could graph it w/ facet_wrap or something like that. But I'd like to avaoid the copy paste part... ideas?
-
-res_min <- res %>% unlist() %>% as.data.frame() %>% mutate(numberz = rep(1:2,101)) %>% filter(numberz==1)
-
-res_max <- res %>% unlist() %>% as.data.frame() %>% mutate(numberz = rep(1:2,101)) %>% filter(numberz==2) 
-
-# if we want to keep track of which statistics is associated with each run, we need a unique identifier
-# an ID that tracks each model output - lets use the column names
-simnames = names(msage %>% select(-date, -month, -day,-year,-wy, -obs, -wyd))
-results = cbind.data.frame(simnames=simnames, minannual_cor = res_min$., maxannual_cor = res_max$.)
+msagel = msage %>% 
+  gather(key="run",
+         value="streamflow", 
+         -date, -month, -day, 
+         -year, -wy, -obs)
+```
 
 
-#results$minannual_cor = res_min$.
-#results$maxannual_cor = res_max$.
+```{r apply}
+# apply the perform_metric function to our data, the grouping variable is year
+res = msage %>% 
+  select(-date, -month, -day, -year, -wy, -obs) %>%
+  map_dfr(~perform_metric(m=.x, 
+                          o=msage$obs, 
+                          month = msage$month, 
+                          day = msage$day,
+                          year=msage$year, 
+                          wy=msage$wy,
+                          grouping=msage$year))
 
-summary(results)
+
+# crate an ID that tracks each model output
+simnames = names(msage %>% 
+  select(-date, -month, -day,-year,-wy, -obs))
+
+results = cbind.data.frame(simnames=simnames, res)
 
 # Make results long format
 resultsl = results %>% 
   gather(key="metric",value="value", -simnames) 
 ```
 
-3.  Find the simulation that gives the best performance (record that and add to the quiz on gauchospace)
-```{r}
-# find the best model run (highest average correlation)
-bestdf <- resultsl %>% 
-  group_by(simnames) %>% 
-  summarize(
-    ave_cor = mean(value)
+### 3.  Find the simulation that gives the best performance 
+
+```{r best}
+# find the best model run (highest average correlation, and both coefficients are larger than 0.6)
+
+bestdf <- results %>% 
+  filter(annual_min_cor > 0.6,
+         annual_max_cor > 0.6) %>%  
+  mutate(
+    ave_cor = (annual_min_cor+annual_max_cor)/2
   ) %>% 
   arrange(-ave_cor)
+
 print(as.character(bestdf$simnames[1]))
 ```
 
 
-4. Create a boxplot of your metric applied to sagerm.txt
-```{r}
+### 4. Create a boxplot of our metric applied to sagerm.txt
+
+```{r boxplot, fig.width=7, fig.height=4}
 # graph range of performance measures
-
-
-resultsplot <- resultsl %>% 
-  mutate(
-    namedmetric = case_when(
-      metric == 'maxannual_cor' ~ 'Annual Max. Flows',
-      metric == 'minannual_cor' ~ 'Annual Min. Flows'
-    )
-  )
-ggplot(resultsplot, aes(namedmetric, value))+
+ggplot(resultsl, aes(metric, value))+
   geom_boxplot()+
-  facet_wrap(~namedmetric, scales="free")+
+  facet_wrap(~metric, scales="free")+
   labs(x='Performance Metric Correlated Variable',
        y='Pearson Correlation Coefficient',
        title = 'Model Performance: Correlation between Simulated and Observed Values')+
-  theme_minimal()
-```
-
-
-5. Submit metric function and boxplot on gauchospace
-
-
-
-
-
-
-
-
-
-Just some basic stuff Kat did first before diving into using the txt file...
-```{r}
-# apply metric on annual basis
-# using water years
-metric_yr <- kat_pat_ruoyu_perform_metric(m=sager$model, o=sager$obs, month = sager$month, day = sager$day, year=sager$year, wy=sager$wy, wyd=sager$wyd, grouping=sager$wy)
-
-metric_yr
-
-# using date years
-
-metric_year <- kat_pat_ruoyu_perform_metric(m=sager$model, o=sager$obs, month = sager$month, day = sager$day, year=sager$year, wy=sager$wy, wyd=sager$wyd, grouping=sager$year)
-
-metric_year
-
-# apply metric on a monthly basis
-
-metric_mo <- kat_pat_ruoyu_perform_metric(m=sager$model, o=sager$obs, month = sager$month, day = sager$day, year=sager$year, wy=sager$wy, wyd=sager$wyd, grouping=sager$month)
-
-metric_mo
-
-# apply metric on a daily basis
-
-metric_d <- kat_pat_ruoyu_perform_metric(m=sager$model, o=sager$obs, month = sager$month, day = sager$day, year=sager$year, wy=sager$wy, wyd=sager$wyd, grouping=sager$wyd)
-
-metric_d
-
-
-# put results into df
-
-res_df <- as.data.frame(cbind(metric_year, metric_yr, metric_mo, metric_d)) %>%
-  rownames_to_column('minvmax') %>% 
-  pivot_longer(names_to = "type", values_to = "cor", cols = c(metric_year:metric_d)) %>% 
-  mutate(minvmax= factor(minvmax),
-         type= factor(type),
-         cor= unlist(cor))
-
-# plot
-
-ggplot(res_df, aes(x=minvmax, y=cor, color=type)) +
-  geom_point()+
-  labs(x= NULL,
-       y= 'Pearson’s Correlation Coefficient',
-       caption = str_wrap('Here we see that the model best predicts maximum flow levels at the annual level using water years, but best predicts minimum flow levels at the annual level using date years. Annual predictions are better than monthly or daily predictions.', 100))
-
+  theme_bw()+
+  theme(axis.text.x = element_blank())
 ```
