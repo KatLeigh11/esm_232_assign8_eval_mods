@@ -112,4 +112,6 @@ ggplot(resultsl, aes(metric, value))+
              labeller = as_labeller(metric_label))+
   theme_bw()+
   theme(axis.text.x = element_blank())
+
+# ggsave("kat_pat_ruoyu_boxplot.png", dpi = 400, width=7, height=4)
 ```
