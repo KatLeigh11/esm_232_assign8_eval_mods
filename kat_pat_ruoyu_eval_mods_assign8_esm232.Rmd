@@ -99,13 +99,17 @@ print(as.character(bestdf$simnames[1]))
 ### 4. Create a boxplot of our metric applied to sagerm.txt
 
 ```{r boxplot, fig.width=7, fig.height=4}
+metric_label <- c(annual_max_cor = "Correlations for Annual Max Flow",
+                  annual_min_cor = "Correlations for Annual Min Flow")
+
 # graph range of performance measures
 ggplot(resultsl, aes(metric, value))+
   geom_boxplot()+
-  facet_wrap(~metric, scales="free")+
   labs(x='Performance Metric Correlated Variable',
        y='Pearson Correlation Coefficient',
        title = 'Model Performance: Correlation between Simulated and Observed Values')+
+  facet_wrap(~metric, scales="free",
+             labeller = as_labeller(metric_label))+
   theme_bw()+
   theme(axis.text.x = element_blank())
 ```
