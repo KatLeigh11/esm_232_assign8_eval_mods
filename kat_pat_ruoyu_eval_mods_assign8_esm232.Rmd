@@ -36,7 +36,7 @@ sager <- sager %>%
 # read in simulation outputs
 msage = read.table("sagerm.txt", header=T)
 
-# combine the simulation outputs with date and acutal observation data in sager.txt
+# combine the simulation outputs with date and actual observation data in sager.txt
 msage$date = sager$date
 msage$month = sager$month
 msage$year = sager$year
@@ -115,3 +115,56 @@ ggplot(resultsl, aes(metric, value))+
 
 # ggsave("kat_pat_ruoyu_boxplot.png", dpi = 400, width=7, height=4)
 ```
+Do this for all possible time periods with a single function
+
+```{r}
+data_F <- msage
+groupingz <- c('date', 'month', 'day', 'year', 'wy')
+
+wrapper <- function(data_F, groupingz){
+
+# apply the perform_metric function to our data
+  
+res = data_F %>% 
+  select(-date, -month, -day, -year, -wy, -obs) %>%
+  map_dfr(~perform_metric(m=.x, 
+                          o=data_F$obs, 
+                          month = data_F$month, 
+                          day = data_F$day,
+                          year=data_F$year, 
+                          wy=data_F$wy,
+                          grouping= eval(parse(text = paste('data_F$',groupingz[i], sep = '')))))
+
+# create an ID that tracks each model output
+simnames = names(data_F %>% 
+  select(-date, -month, -day,-year,-wy, -obs))
+
+results = cbind.data.frame(simnames=simnames, res)
+
+# Make results long format
+resultsl = results %>% 
+  gather(key="metric",value="value", -simnames) 
+
+# find the best model run (highest average correlation, and both coefficients are larger than 0.6)
+
+bestdf <- results %>% 
+  filter(annual_min_cor > 0.6,
+         annual_max_cor > 0.6) %>%  
+  mutate(
+    ave_cor = (annual_min_cor+annual_max_cor)/2
+  ) %>% 
+  arrange(-ave_cor)
+
+return(list(resultsl, print(as.character(bestdf$simnames[1]))))
+}
+
+```
+
+```{r}
+for(i in groupingz){
+  
+test <- wrapper(data_F, groupingz)
+}
+  
+```
+
