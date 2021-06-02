@@ -165,11 +165,26 @@ for(i in 1:length(groupingz)){
  test <- wrapper(data_F, groupingz)
 }
 
-  
 ```
 
 1. the for loop wasn't working because groupings was created using c() instead of a list, so the numbers don't automatically loop through. To change this, use the notation 1:length() in the for loop 
 2. some of the results came out as NA still, because they weren't meeting the requirements of min and max cor being > 0.6 
+
+```{r}
+
+# graph range of performance measures -- gotta find a way to access the list and then group by timestep
+ggplot(test, aes(metric, value))+
+  geom_boxplot()+
+  labs(x='Performance Metric Correlated Variable',
+       y='Pearson Correlation Coefficient',
+       title = 'Model Performance: Correlation between Simulated and Observed Values')+
+  facet_wrap(~groupingz, scales="free",
+             labeller = as_labeller(metric_label))+
+  theme_bw()+
+  theme(axis.text.x = element_blank())
+```
+
+
 
 If you didn't want to use a for loop, here is another example 
 ```{r timesteps}
@@ -211,7 +226,7 @@ bestdf <- results %>%
   ) %>% 
   arrange(-ave_cor)
 
-return(list(resultsl, bestsim=as.character(bestdf$simnames[1]), bestsim_cor=bestdf$ave_cor[1]))
+return(list(df_rez=resultsl, bestsim=as.character(bestdf$simnames[1]), bestsim_cor=bestdf$ave_cor[1]))
 }
 
 timestep <- c('date', 'month', 'day', 'year', 'wy')
@@ -220,6 +235,27 @@ bestsim_res = tmp %>% map_dfr(`[`,c("bestsim","bestsim_cor")) %>%
   mutate(timestep=timestep)
 bestsim_res
 
+
+boxplotable <- tmp %>% map_dfr(`[`,c("df_rez")) %>% 
+  mutate(timestep = c(rep('date', times = 202), rep('month', times = 202), rep('day', times = 202), rep('year', times = 202), rep('wy', times = 202)))
+
 ```
+
+```{r}
+
+timestep_label <-timestep
+
+ggplot()+
+  geom_boxplot(data = boxplotable, aes(df_rez$metric, df_rez$value, group = df_rez$metric, color = df_rez$metric))+
+  labs(x='Performance Metric Correlated Variable',
+       y='Pearson Correlation Coefficient',
+       title = 'Model Performance: Correlation between Simulated and Observed Values')+
+  facet_wrap(~timestep, scales="free"
+             )+
+  theme_bw()+
+  theme(axis.text.x = element_blank())
+
+```
+
 
 still getting NAs for month and day because the annual_min_cor does not go above 0.6, but this could be easily adjusted in the wrapper function to either change the threshold or use different weights to select the 'best' simulation 
